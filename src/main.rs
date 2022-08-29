@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, process::exit};
 
 use coc_rs::{credentials::CredentialsBuilder
 , api::Client};
@@ -49,7 +49,7 @@ async fn main() {
         Ok(c) => c,
         Err(why) => {
             println!("Error creating coc api client: {:?}", why);
-            return;
+            exit(1);
         }
     
     };
