@@ -1,5 +1,7 @@
 use std::env;
 
+use coc_rs::{credentials::CredentialsBuilder
+, api::Client};
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
@@ -39,6 +41,23 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
+    let credentials = CredentialsBuilder::new()
+    .add_credential(env::var("username").unwrap(), env::var("password").unwrap())
+    .build();
+    println!("found credentials: {:?}", credentials);
+    let coc_client = match Client::new(credentials).await {
+        Ok(c) => c,
+        Err(why) => {
+            println!("Error creating coc api client: {:?}", why);
+            return;
+        }
+    
+    };
+    println!("connected to coc api");
+    let player = coc_client.get_player("#2PP".to_string()).await.unwrap();
+
+    println!("Player: {:?}", player);
+
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     // Set gateway intents, which decides what events the bot will be notified about
@@ -46,17 +65,18 @@ async fn main() {
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
+
     // Create a new instance of the Client, logging in as a bot. This will
     // automatically prepend your bot token with "Bot ", which is a requirement
     // by Discord for bot users.
-    let mut client =
-        Client::builder(&token, intents).event_handler(Handler).await.expect("Err creating client");
+    let mut discord_client =
+    serenity::Client::builder(&token, intents).event_handler(Handler).await.expect("Err creating client");
 
     // Finally, start a single shard, and start listening to events.
     //
     // Shards will automatically attempt to reconnect, and will perform
     // exponential backoff until it reconnects.
-    if let Err(why) = client.start().await {
+    if let Err(why) = discord_client.start().await {
         println!("Client error: {:?}", why);
     }
 }
