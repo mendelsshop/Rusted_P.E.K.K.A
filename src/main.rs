@@ -54,10 +54,6 @@ async fn main() {
     
     };
     println!("connected to coc api");
-    let player = coc_client.get_player("#2PP".to_string()).await.unwrap();
-
-    println!("Player: {:?}", player);
-
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     // Set gateway intents, which decides what events the bot will be notified about
