@@ -1,5 +1,4 @@
-use std::{env, process::exit}
-
+use std::{env, process::exit};
 use coc_rs::{credentials::CredentialsBuilder, api::Client};
 use serenity::async_trait;
 use serenity::model::channel::Message;
@@ -21,15 +20,21 @@ impl EventHandler for Handler {
             // authentication error, or lack of permissions to post in the
             // channel, so log to stdout when some error happens, with a
             // description of it.
-            if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
+            if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!, Took `Some amount of time`!").await {
                 eprintln!("Error sending message: {:?}", why);
             }
         }
 	else if msg.content == "!about" {
-	    if let Err(why) = msg.channel_id.say(&ctx.http, "I am made in rust").await {
+	    if let Err(why) = msg.channel_id.say(&ctx.http, "I am made in rust.\nI am a P.E.K.K.A no longer in service,\nbecause I rusted near the spell factory,\nhere to help all the clash chiefs. ").await {
 	    	eprintln!("Error sending message: {:?}", why);
             }
 	}
+        else if msg.content == "!help" {
+            if let Err(why) = msg.channel_id.say(&ctx.http, "help not found, lol").await {
+                eprintln!("Error sending message: {:?}", why);
+            }
+        }
+
     }
 
     // Set a handler to be called on the `ready` event. This is called when a
@@ -71,7 +76,7 @@ async fn main() {
     // by Discord for bot users.
     let mut discord_client =
     serenity::Client::builder(&token, intents).event_handler(Handler).await.expect("Err creating client");
-
+    println!("discord connected!");
     // Finally, start a single shard, and start listening to events.
     //
     // Shards will automatically attempt to reconnect, and will perform
