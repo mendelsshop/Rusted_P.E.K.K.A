@@ -1,7 +1,6 @@
-use std::{env, process::exit};
+use std::{env, process::exit}
 
-use coc_rs::{credentials::CredentialsBuilder
-, api::Client};
+use coc_rs::{credentials::CredentialsBuilder, api::Client};
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
@@ -23,9 +22,14 @@ impl EventHandler for Handler {
             // channel, so log to stdout when some error happens, with a
             // description of it.
             if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
-                println!("Error sending message: {:?}", why);
+                eprintln!("Error sending message: {:?}", why);
             }
         }
+	else if msg.content == "!about" {
+	    if let Err(why) = msg.channel_id.say(&ctx.http, "I am made in rust").await {
+	    	eprintln!("Error sending message: {:?}", why);
+            }
+	}
     }
 
     // Set a handler to be called on the `ready` event. This is called when a
