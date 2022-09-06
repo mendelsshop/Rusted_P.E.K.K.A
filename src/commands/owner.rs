@@ -3,7 +3,7 @@ use serenity::framework::standard::CommandResult;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use crate::ShardManagerContainer;
+use Rusted_PEKKA::ShardManagerContainer;
 
 #[command]
 #[owners_only]

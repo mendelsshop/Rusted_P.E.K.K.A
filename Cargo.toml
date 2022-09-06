@@ -9,6 +9,7 @@ edition = "2021"
 coc-rs = "0.5.6"
 log = "0.4.14"
 simple_file_logger = "0.2.0"
+lazy_static = "1.4.0"
 
 [dependencies.tokio]
 version = "1.0"

@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use std::process::exit;
 
-use serenity::async_trait;
+use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer};
+use serenity::{async_trait};
 use serenity::client::bridge::gateway::ShardManager;
 use serenity::framework::standard::macros::group;
 use serenity::framework::StandardFramework;
@@ -20,28 +21,23 @@ use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredential
 
 use crate::commands::meta::*;
 use crate::commands::owner::*;
-
-pub struct ShardManagerContainer;
-
-impl TypeMapKey for ShardManagerContainer {
-    type Value = Arc<Mutex<ShardManager>>;
-}
+use crate::commands::cocs::*;
 
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
-        log::info!("Connected as {}", ready.user.name);
+        println!("Connected as {}", ready.user.name);
     }
 
     async fn resume(&self, _: Context, _: ResumedEvent) {
-        log::info!("Resumed");
+        println!("Resumed");
     }
 }
 
 #[group]
-#[commands(ping, quit, about)]
+#[commands(ping, quit, about, player)]
 struct General;
 
 #[tokio::main]
@@ -90,6 +86,7 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
+        data.insert::<CocClientContainer>(coc_client.clone());
     }
 
     let shard_manager = client.shard_manager.clone();
@@ -103,3 +100,4 @@ async fn main() {
         log::error!("Client error: {:?}", why);
     }
 }
+
