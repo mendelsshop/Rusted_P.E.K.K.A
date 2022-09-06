@@ -17,7 +17,7 @@ use serenity::prelude::*;
 
 use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredentials};
 
-use crate::commands::math::*;
+
 use crate::commands::meta::*;
 use crate::commands::owner::*;
 
@@ -41,7 +41,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(multiply, ping, quit)]
+#[commands(ping, quit, about)]
 struct General;
 
 #[tokio::main]
@@ -76,7 +76,7 @@ async fn main() {
 
     // Create the framework
     let framework =
-        StandardFramework::new().configure(|c| c.owners(owners).prefix("~")).group(&GENERAL_GROUP);
+        StandardFramework::new().configure(|c| c.owners(owners).prefix("/")).group(&GENERAL_GROUP);
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
