@@ -1,60 +1,56 @@
-use std::{env, process::exit};
-use coc_rs::{credentials::CredentialsBuilder, api::Client};
+mod commands;
+
+use std::collections::HashSet;
+use std::env;
+use std::sync::Arc;
+
+use std::process::exit;
+
 use serenity::async_trait;
-use serenity::model::channel::Message;
+use serenity::client::bridge::gateway::ShardManager;
+use serenity::framework::standard::macros::group;
+use serenity::framework::StandardFramework;
+use serenity::http::Http;
+use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
+
+use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredentials};
+
+use crate::commands::math::*;
+use crate::commands::meta::*;
+use crate::commands::owner::*;
+
+pub struct ShardManagerContainer;
+
+impl TypeMapKey for ShardManagerContainer {
+    type Value = Arc<Mutex<ShardManager>>;
+}
 
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    // Set a handler for the `message` event - so that whenever a new message
-    // is received - the closure (or function) passed will be called.
-    //
-    // Event handlers are dispatched through a threadpool, and so multiple
-    // events can be dispatched simultaneously.
-    async fn message(&self, ctx: Context, msg: Message) {
-        if msg.content == "!ping" {
-            // Sending a message can fail, due to a network error, an
-            // authentication error, or lack of permissions to post in the
-            // channel, so log to stdout when some error happens, with a
-            // description of it.
-            if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!, Took `Some amount of time`!").await {
-                eprintln!("Error sending message: {:?}", why);
-            }
-        }
-	else if msg.content == "!about" {
-	    if let Err(why) = msg.channel_id.say(&ctx.http, "I am made in rust.\nI am a P.E.K.K.A no longer in service,\nbecause I rusted near the spell factory,\nhere to help all the clash chiefs. ").await {
-	    	eprintln!("Error sending message: {:?}", why);
-            }
-	}
-        else if msg.content == "!help" {
-            if let Err(why) = msg.channel_id.say(&ctx.http, "help not found, lol").await {
-                eprintln!("Error sending message: {:?}", why);
-            }
-        }
-
+    async fn ready(&self, _: Context, ready: Ready) {
+        log::info!("Connected as {}", ready.user.name);
     }
 
-    // Set a handler to be called on the `ready` event. This is called when a
-    // shard is booted, and a READY payload is sent by Discord. This payload
-    // contains data like the current user's guild Ids, current user data,
-    // private channels, and more.
-    //
-    // In this case, just print what the current user's username is.
-    async fn ready(&self, _: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+    async fn resume(&self, _: Context, _: ResumedEvent) {
+        log::info!("Resumed");
     }
 }
 
+#[group]
+#[commands(multiply, ping, quit)]
+struct General;
+
 #[tokio::main]
 async fn main() {
-    let credentials = CredentialsBuilder::new()
-    .add_credential(env::var("username").unwrap(), env::var("password").unwrap())
+    let credentials = CocCredentials::builder().
+    add_credential(env::var("username").expect("coc api email not found"), env::var("password").expect("Password not found"))
     .build();
     println!("found credentials: {:?}", credentials);
-    let coc_client = match Client::new(credentials).await {
+    let coc_client = match CocClient::new(credentials).await {
         Ok(c) => c,
         Err(why) => {
             println!("Error creating coc api client: {:?}", why);
@@ -63,25 +59,47 @@ async fn main() {
     
     };
     println!("connected to coc api");
-    // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    // Set gateway intents, which decides what events the bot will be notified about
+
+    let http = Http::new(&token);
+
+    // We will fetch your bot's owners and id
+    let (owners, _bot_id) = match http.get_current_application_info().await {
+        Ok(info) => {
+            let mut owners = HashSet::new();
+            owners.insert(info.owner.id);
+
+            (owners, info.id)
+        },
+        Err(why) => panic!("Could not access application info: {:?}", why),
+    };
+
+    // Create the framework
+    let framework =
+        StandardFramework::new().configure(|c| c.owners(owners).prefix("~")).group(&GENERAL_GROUP);
+
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
+    let mut client = Client::builder(&token, intents)
+        .framework(framework)
+        .event_handler(Handler)
+        .await
+        .expect("Err creating client");
 
+    {
+        let mut data = client.data.write().await;
+        data.insert::<ShardManagerContainer>(client.shard_manager.clone());
+    }
 
-    // Create a new instance of the Client, logging in as a bot. This will
-    // automatically prepend your bot token with "Bot ", which is a requirement
-    // by Discord for bot users.
-    let mut discord_client =
-    serenity::Client::builder(&token, intents).event_handler(Handler).await.expect("Err creating client");
-    println!("discord connected!");
-    // Finally, start a single shard, and start listening to events.
-    //
-    // Shards will automatically attempt to reconnect, and will perform
-    // exponential backoff until it reconnects.
-    if let Err(why) = discord_client.start().await {
-        println!("Client error: {:?}", why);
+    let shard_manager = client.shard_manager.clone();
+
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.expect("Could not register ctrl+c handler");
+        shard_manager.lock().await.shutdown_all().await;
+    });
+
+    if let Err(why) = client.start().await {
+        log::error!("Client error: {:?}", why);
     }
 }
