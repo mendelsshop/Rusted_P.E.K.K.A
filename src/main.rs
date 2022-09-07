@@ -1,14 +1,12 @@
 mod commands;
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::env;
-use std::sync::Arc;
 
 use std::process::exit;
 
-use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer};
+use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer};
 use serenity::{async_trait};
-use serenity::client::bridge::gateway::ShardManager;
 use serenity::framework::standard::macros::group;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
@@ -87,6 +85,7 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
         data.insert::<CocClientContainer>(coc_client.clone());
+        data.insert::<UserMessageContainer>(HashMap::new());
     }
 
     let shard_manager = client.shard_manager.clone();
