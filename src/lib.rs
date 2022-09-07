@@ -69,10 +69,9 @@ pub async fn check_to_many_times(ctx: &Context, msg: &Message, cmd: String) -> C
     if too_many_tries(cmd.clone(), ctx, msg.author.id.0).await {
         println!("Too many tries {}", cmd);
         let times = get_user_message(ctx, msg.author.id.0).await.unwrap().0;
-        msg.channel_id
-            .say(
+        msg.reply(
                 &ctx.http,
-                format!("Calm down you've done the /{} {} times!",cmd, times),
+                format!("Calm down you've done /{} {} times!",cmd, times),
             )
             .await?;
         return Err("Too many tries".into());

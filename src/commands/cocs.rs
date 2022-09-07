@@ -12,19 +12,16 @@ async fn player(ctx: &Context, msg: &Message) -> CommandResult {
                 Ok(p) => p,
                 Err(why) => {
                     println!("Error getting player: {:?}", why);
-                    msg.channel_id
-                        .say(&ctx.http, "Error getting player")
+                    msg.reply(&ctx.http, "Error getting player")
                         .await?;
                     return Ok(());
                 }
             };
-            msg.channel_id
-                .say(&ctx.http, format!("Player: {}", player.name))
+            msg.reply(&ctx.http, format!("Player: {}", player.name))
                 .await?;
         }
         None => {
-            msg.channel_id
-                .say(&ctx.http, "No player tag provided")
+            msg.reply(&ctx.http, "No player tag provided")
                 .await?;
         }
     }
