@@ -1,25 +1,24 @@
 mod commands;
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::env;
 
 use std::process::exit;
 
-use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer};
-use serenity::{async_trait};
+use serenity::async_trait;
 use serenity::framework::standard::macros::group;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
+use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer};
 
 use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredentials};
 
-
+use crate::commands::cocs::*;
 use crate::commands::meta::*;
 use crate::commands::owner::*;
-use crate::commands::cocs::*;
 
 struct Handler;
 
@@ -40,9 +39,12 @@ struct General;
 
 #[tokio::main]
 async fn main() {
-    let credentials = CocCredentials::builder().
-    add_credential(env::var("username").expect("coc api email not found"), env::var("password").expect("Password not found"))
-    .build();
+    let credentials = CocCredentials::builder()
+        .add_credential(
+            env::var("username").expect("coc api email not found"),
+            env::var("password").expect("Password not found"),
+        )
+        .build();
     println!("found credentials: {:?}", credentials);
     let coc_client = match CocClient::new(credentials).await {
         Ok(c) => c,
@@ -50,7 +52,6 @@ async fn main() {
             println!("Error creating coc api client: {:?}", why);
             exit(1);
         }
-    
     };
     println!("connected to coc api");
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
@@ -64,13 +65,14 @@ async fn main() {
             owners.insert(info.owner.id);
 
             (owners, info.id)
-        },
+        }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
 
     // Create the framework
-    let framework =
-        StandardFramework::new().configure(|c| c.owners(owners).prefix("/")).group(&GENERAL_GROUP);
+    let framework = StandardFramework::new()
+        .configure(|c| c.owners(owners).prefix("/"))
+        .group(&GENERAL_GROUP);
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
@@ -91,7 +93,9 @@ async fn main() {
     let shard_manager = client.shard_manager.clone();
 
     tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.expect("Could not register ctrl+c handler");
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Could not register ctrl+c handler");
         shard_manager.lock().await.shutdown_all().await;
     });
 
@@ -99,4 +103,3 @@ async fn main() {
         log::error!("Client error: {:?}", why);
     }
 }
-
