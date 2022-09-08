@@ -48,12 +48,14 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
     let player_id = player_id.send().await.unwrap();
     match player_id.status() {
         reqwest::StatusCode::OK => {
-            let player_id = Some(player_id.text().await.unwrap());
-            Some(player_id)
+            let player_id = player_id.text().await.unwrap();
+            let player_id: Value = serde_json::from_str(&player_id).unwrap();
+            let player_id = player_id.as_array().unwrap()[0]["playerTag"].as_str().unwrap();
+            Some(player_id.to_string())
+
         }
         _ => None,
-    };
-    None
+    }
 }
 
 pub struct CocClientContainer;
