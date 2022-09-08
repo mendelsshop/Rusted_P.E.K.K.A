@@ -48,8 +48,6 @@ async fn main() {
     map.insert("password", &discord_link_password);
     let discord_link_token = Arc::new(Mutex::new(client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap()));
     Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
-    std::thread::sleep(std::time::Duration::from_secs(180));
-    println!("new token: {}", discord_link_token.lock().await);
     let coc_credentials = CocCredentials::builder()
         .add_credential(
             env::var("cocapi_username").expect("coc api email not found"),

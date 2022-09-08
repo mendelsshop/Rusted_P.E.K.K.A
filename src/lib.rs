@@ -46,7 +46,6 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
     let client = reqwest::Client::new();
     let mut player_id = client.get(format!("https://cocdiscord.link/links/{discord_id}"));
     player_id = player_id.bearer_auth(discord_link_api);
-    // println!("{:?}", player_id);
     let player_id = player_id.send().await.unwrap();
     match player_id.status() {
         reqwest::StatusCode::OK => {
