@@ -22,7 +22,7 @@ use crate::commands::meta::*;
 use crate::commands::owner::*;
 
 
-use reqwest;
+
 struct Handler;
 
 #[async_trait]
@@ -41,12 +41,9 @@ impl EventHandler for Handler {
 struct General;
 #[tokio::main]
 async fn main() {
-    for (key, value) in env::vars_os() {
-        println!("{key:?}: {value:?}");
-    }
+    // TODO: stop using unwrap everywhere and use proper error handling
     let discord_link_user = env::var("discordlink_username").expect("Expected DISCORD_LINK_USER in environment");
     let discord_link_password = env::var("discordlink_password").expect("Expected DISCORD_LINK_PASSWORD in environment");
-    println!("{} {}", discord_link_user, discord_link_password);
     let client = reqwest::Client::new();
     let mut map = HashMap::new();
     map.insert("username", &discord_link_user);

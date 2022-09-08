@@ -1,5 +1,4 @@
 use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error};
-use base64;
 
 use serde_json::Value;
 use serenity::{
@@ -114,20 +113,16 @@ pub async fn check_to_many_times(ctx: &Context, msg: &Message, cmd: String) -> C
 }
 
 pub fn decode_jwt_for_time_left(token: &str) -> Result<bool, Box<dyn Error>> {
-    println!("token: {}", token);
     let mut split_token = token.split('.').collect::<Vec<&str>>();
     split_token.pop();
-    let mut split_token: [&str; 2] = match split_token.try_into() {
+    let split_token: [&str; 2] = match split_token.try_into() {
         Ok(token) => token,
         Err(t) => return Err(format!("invalid token cold not be parsed {:?}", t).as_str())?,
     };
     let mut split_token_string: [String; 2] = ["".to_string(), "".to_string()];
-    let mut i = 0;
-    for token in &mut split_token {
-        println!("token: {}", token);
+    for (i, token) in split_token.into_iter().enumerate() {
         let t = base64::decode_config(token, base64::URL_SAFE_NO_PAD).unwrap();
         split_token_string[i]=String::from_utf8(t).unwrap();
-        i += 1;
     }
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let t = serde_json::from_str::<Value>(&split_token_string[1])?;
@@ -141,7 +136,7 @@ pub fn decode_jwt_for_time_left(token: &str) -> Result<bool, Box<dyn Error>> {
 }
 
 pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, password: String)  {
-    let keys = Arc::clone(&key);
+    let keys = Arc::clone(key);
     tokio::spawn(async move {
         loop {
             if decode_jwt_for_time_left(keys.lock().await.as_str()).unwrap() {
