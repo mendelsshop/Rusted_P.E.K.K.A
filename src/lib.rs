@@ -122,6 +122,7 @@ pub fn decode_jwt_for_time_left(token: &str) -> Result<bool, Box<dyn Error>> {
     let mut split_token_string: [String; 2] = ["".to_string(), "".to_string()];
     let mut i = 0;
     for token in &mut split_token {
+        println!("token: {}", token);
         let t = base64::decode_config(token, base64::URL_SAFE_NO_PAD).unwrap();
         split_token_string[i]=String::from_utf8(t).unwrap();
         i += 1;
