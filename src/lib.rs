@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error};
 use base64;
 
-use reqwest::Response;
 use serde_json::Value;
 use serenity::{
     client::bridge::gateway::ShardManager, framework::standard::CommandResult,
