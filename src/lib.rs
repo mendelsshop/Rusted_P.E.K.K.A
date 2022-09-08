@@ -148,8 +148,9 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
                     let mut map = HashMap::new();
                     map.insert("username", &username);
                     map.insert("password", &password);
-                    let discord_link_token = client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap();
-                    *keys.lock().await = discord_link_token;
+                    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap()).unwrap();
+                    let discord_link_token = discord_link_token["token"].as_str().unwrap();
+                    *keys.lock().await = discord_link_token.to_string();
             }
             std::thread::sleep(std::time::Duration::from_secs(600));
         }

@@ -5,6 +5,7 @@ use std::env;
 
 use std::process::exit;
 
+use serde_json::Value;
 use serenity::async_trait;
 use serenity::framework::standard::macros::group;
 use serenity::framework::StandardFramework;
@@ -50,11 +51,9 @@ async fn main() {
     let mut map = HashMap::new();
     map.insert("username", &discord_link_user);
     map.insert("password", &discord_link_password);
-    println!("{:?}", client.post("https://cocdiscord.link/login").json(&map).build().unwrap().headers());
-    println!("{:?}", client.post("https://cocdiscord.link/login").json(&map).build().unwrap().body());
-    println!("{:?}", client.post("https://cocdiscord.link/login").json(&map).build().unwrap().url());
-    println!("{:?}", map);
-    let discord_link_token = Arc::new(Mutex::new(client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap()));
+    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap()).unwrap();
+    let discord_link_token = discord_link_token["token"].as_str().unwrap();
+    let discord_link_token = Arc::new(Mutex::new(discord_link_token.to_string()));
     Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
     let coc_credentials = CocCredentials::builder()
         .add_credential(
