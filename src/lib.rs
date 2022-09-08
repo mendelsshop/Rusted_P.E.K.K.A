@@ -112,11 +112,12 @@ pub async fn check_to_many_times(ctx: &Context, msg: &Message, cmd: String) -> C
 }
 
 pub fn decode_jwt_for_time_left(token: &str) -> Result<bool, Box<dyn Error>> {
+    println!("token: {}", token);
     let mut split_token = token.split('.').collect::<Vec<&str>>();
     split_token.pop();
     let mut split_token: [&str; 2] = match split_token.try_into() {
         Ok(token) => token,
-        Err(_) => return Err("invalid token cold not be parsed")?,
+        Err(t) => return Err(format!("invalid token cold not be parsed {:?}", t).as_str())?,
     };
     let mut split_token_string: [String; 2] = ["".to_string(), "".to_string()];
     let mut i = 0;
