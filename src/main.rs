@@ -1,6 +1,6 @@
 mod commands;
 
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, sync::Arc};
 use std::env;
 
 use std::process::exit;
@@ -12,7 +12,7 @@ use serenity::http::Http;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer};
+use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer, DiscordLinkAPIContainer};
 
 use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredentials};
 
@@ -20,6 +20,8 @@ use crate::commands::cocs::*;
 use crate::commands::meta::*;
 use crate::commands::owner::*;
 
+
+use reqwest;
 struct Handler;
 
 #[async_trait]
@@ -36,17 +38,26 @@ impl EventHandler for Handler {
 #[group]
 #[commands(ping, quit, about, player)]
 struct General;
-
 #[tokio::main]
 async fn main() {
-    let credentials = CocCredentials::builder()
+    let discord_link_user = env::var("discordlink_username").expect("Expected DISCORD_LINK_USER in environment");
+    let discord_link_password = env::var("discordlink_password").expect("Expected DISCORD_LINK_PASSWORD in environment");
+    let client = reqwest::Client::new();
+    let mut map = HashMap::new();
+    map.insert("username", &discord_link_user);
+    map.insert("password", &discord_link_password);
+    let discord_link_token = Arc::new(Mutex::new(client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap()));
+    Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
+    std::thread::sleep(std::time::Duration::from_secs(180));
+    println!("new token: {}", discord_link_token.lock().await);
+    let coc_credentials = CocCredentials::builder()
         .add_credential(
-            env::var("username").expect("coc api email not found"),
-            env::var("password").expect("Password not found"),
+            env::var("cocapi_username").expect("coc api email not found"),
+            env::var("cocapi_password").expect("Password not found"),
         )
         .build();
-    println!("found credentials: {:?}", credentials);
-    let coc_client = match CocClient::new(credentials).await {
+    println!("found credentials: {:?}", coc_credentials);
+    let coc_client = match CocClient::new(coc_credentials).await {
         Ok(c) => c,
         Err(why) => {
             println!("Error creating coc api client: {:?}", why);
@@ -88,6 +99,7 @@ async fn main() {
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
         data.insert::<CocClientContainer>(coc_client.clone());
         data.insert::<UserMessageContainer>(HashMap::new());
+        data.insert::<DiscordLinkAPIContainer>(discord_link_token);
     }
 
     let shard_manager = client.shard_manager.clone();
