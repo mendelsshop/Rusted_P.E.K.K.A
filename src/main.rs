@@ -50,6 +50,10 @@ async fn main() {
     let mut map = HashMap::new();
     map.insert("username", &discord_link_user);
     map.insert("password", &discord_link_password);
+    println!("{:?}", client.post("https://cocdiscord.link/login").json(&map).build().unwrap().headers());
+    println!("{:?}", client.post("https://cocdiscord.link/login").json(&map).build().unwrap().body());
+    println!("{:?}", client.post("https://cocdiscord.link/login").json(&map).build().unwrap().url());
+    println!("{:?}", map);
     let discord_link_token = Arc::new(Mutex::new(client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap()));
     Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
     let coc_credentials = CocCredentials::builder()
