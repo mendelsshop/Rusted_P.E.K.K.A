@@ -42,6 +42,7 @@ struct General;
 #[tokio::main]
 async fn main() {
     // TODO: stop using unwrap everywhere and use proper error handling
+    // and check for bad responces from rqwest
     let discord_link_user = env::var("discordlink_username").expect("Expected DISCORD_LINK_USER in environment");
     let discord_link_password = env::var("discordlink_password").expect("Expected DISCORD_LINK_PASSWORD in environment");
     let client = reqwest::Client::new();

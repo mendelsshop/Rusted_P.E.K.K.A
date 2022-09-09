@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error};
+use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error, process::exit};
 
 use serde_json::Value;
 use serenity::{
@@ -145,7 +145,7 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
                     let mut map = HashMap::new();
                     map.insert("username", &username);
                     map.insert("password", &password);
-                    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap().text().await.unwrap()).unwrap();
+                    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap_or_else(|_| {println!("could not get link api responce"); exit(1)}).text().await.unwrap_or_else(|_|{println!("could not get text from reponce link api"); exit(1)})).unwrap_or_else(|_| {println!("could not parse json"); exit(1)});
                     let discord_link_token = discord_link_token["token"].as_str().unwrap();
                     *keys.lock().await = discord_link_token.to_string();
             }
