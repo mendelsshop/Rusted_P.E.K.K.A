@@ -14,17 +14,18 @@ async fn player(ctx: &Context, msg: &Message) -> CommandResult {
             Ok(p) => p,
             Err(why) => {
                 Rusted_PEKKA::writes(format!("Error getting player: {:?}", why));
-                msg.reply(&ctx.http, "Error getting player")
-                    .await?;
+                msg.reply(&ctx.http, "Error getting player").await?;
                 return Ok(());
             }
         };
         msg.reply(&ctx.http, format!("Player: {}", player.name))
             .await?;
     } else {
-        msg.reply(&ctx.http, "No player tag provided, use /link to link your account")
-            .await?;
-
+        msg.reply(
+            &ctx.http,
+            "No player tag provided, use /link to link your account",
+        )
+        .await?;
     }
 
     Ok(())

@@ -1,16 +1,21 @@
-use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error, fmt::{Display, self}};
+use std::{
+    collections::HashMap,
+    convert::TryInto,
+    error::Error,
+    fmt::{self, Display},
+    sync::Arc, process::exit,
+};
 
+use coc_rs::api::Client as CocClient;
 use serde_json::Value;
 use serenity::{
     client::bridge::gateway::ShardManager, framework::standard::CommandResult,
     model::prelude::Message, prelude::*,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
-use coc_rs::api::Client as CocClient;
-lazy_static::lazy_static!{
+lazy_static::lazy_static! {
     pub static ref SHOULD_LOG: bool = parse_args().log;
 }
-
 
 pub async fn get_coc_client(ctx: &Context) -> CocClient {
     let data = ctx.data.read().await;
@@ -53,9 +58,10 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
         reqwest::StatusCode::OK => {
             let player_id = player_id.text().await.unwrap();
             let player_id: Value = serde_json::from_str(&player_id).unwrap();
-            let player_id = player_id.as_array().unwrap()[0]["playerTag"].as_str().unwrap();
+            let player_id = player_id.as_array().unwrap()[0]["playerTag"]
+                .as_str()
+                .unwrap();
             Some(player_id.to_string())
-
         }
         _ => None,
     }
@@ -103,13 +109,16 @@ pub async fn too_many_tries(msg: String, ctx: &Context, id: u64) -> bool {
 
 pub async fn check_to_many_times(ctx: &Context, msg: &Message, cmd: String) -> CommandResult {
     if too_many_tries(cmd.clone(), ctx, msg.author.id.0).await {
-        writes(format!("Too many tries author:{}, command:{}",msg.author, cmd ));
+        writes(format!(
+            "Too many tries author:{}, command:{}",
+            msg.author, cmd
+        ));
         let times = get_user_message(ctx, msg.author.id.0).await.unwrap().0;
         msg.reply(
-                &ctx.http,
-                format!("Calm down you've done /{} {} times!",cmd, times),
-            )
-            .await?;
+            &ctx.http,
+            format!("Calm down you've done /{} {} times!", cmd, times),
+        )
+        .await?;
         return Err("Too many tries".into());
     };
     writes(format!("Not too many tries {}", cmd));
@@ -126,20 +135,23 @@ pub fn decode_jwt_for_time_left(token: &str) -> Result<u64, Box<dyn Error + Send
     let mut split_token_string: [String; 2] = ["".to_string(), "".to_string()];
     for (i, token) in split_token.into_iter().enumerate() {
         let t = base64::decode_config(token, base64::URL_SAFE_NO_PAD).unwrap();
-        split_token_string[i]=String::from_utf8(t).unwrap();
+        split_token_string[i] = String::from_utf8(t).unwrap();
     }
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let t = serde_json::from_str::<Value>(&split_token_string[1])?;
     let t: u64 = t.get("exp").unwrap().as_f64().unwrap() as u64;
-    
+
     if t < now {
-        return Err("Token expired")?;    
+        return Err("Token expired")?;
     }
 
     Ok(t - now)
 }
 
-pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, password: String)  {
+pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, password: String) {
     let keys = Arc::clone(key);
     tokio::spawn(async move {
         loop {
@@ -158,7 +170,6 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
                             };
                             *keys.lock().await = temp.0;
                             temp.1
-
                         }
                         _ => {
                             writes(format!("Error decoding jwt {}", e));
@@ -181,24 +192,43 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
     });
 }
 
-pub async fn get_new_link_token(username: &str, password: &str) -> Result<(String, u64), Box<dyn Error + Send + Sync>> {
+pub async fn get_new_link_token(
+    username: &str,
+    password: &str,
+) -> Result<(String, u64), Box<dyn Error + Send + Sync>> {
     let client = reqwest::Client::new();
     let mut map = HashMap::new();
     map.insert("username", &username);
     map.insert("password", &password);
-    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await?.text().await?)?;
-    let discord_link_token = discord_link_token["token"].as_str().unwrap_to_err("could not get token from json")?;
-    Ok((discord_link_token.to_string(), decode_jwt_for_time_left(discord_link_token)?))
+    let discord_link_token = serde_json::from_str::<Value>(
+        &client
+            .post("https://cocdiscord.link/login")
+            .json(&map)
+            .send()
+            .await?
+            .text()
+            .await?,
+    )?;
+    let discord_link_token = discord_link_token["token"]
+        .as_str()
+        .unwrap_to_err("could not get token from json")?;
+    Ok((
+        discord_link_token.to_string(),
+        decode_jwt_for_time_left(discord_link_token)?,
+    ))
 }
 
-fn parse_args() -> Config{
+fn parse_args() -> Config {
     let args = std::env::args();
     let mut config = Config::new();
     for arg in args {
         match arg.as_str() {
             "--log" => {
                 config.log = true;
-
+            }
+            "--help" => {
+                println!("--log to log to file");
+                exit(0);
             }
             _ => {}
         }
