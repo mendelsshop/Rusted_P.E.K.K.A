@@ -12,7 +12,7 @@ use serenity::http::Http;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer, DiscordLinkAPIContainer};
+use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer, DiscordLinkAPIContainer, writes};
 
 use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredentials};
 
@@ -68,10 +68,11 @@ async fn main()  {
     let discord_link_token = match  Rusted_PEKKA::get_new_link_token(&discord_link_user, &discord_link_password).await {
         Ok(token) => token.0,
         Err(why) => {
-            Rusted_PEKKA::writes(format!("Error getting link token: {:?}", why));
+            writes(format!("Error getting link token: {:?}", why));
             exit(1);
         }
     };
+    writes(format!("Got link token: {}", discord_link_token));
     let discord_link_token = Arc::new(Mutex::new(discord_link_token.to_string()));
     Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
     let coc_credentials = CocCredentials::builder()
@@ -80,11 +81,11 @@ async fn main()  {
             env::var("cocapi_password").expect("Password not found"),
         )
         .build();
-    Rusted_PEKKA::writes(format!("found credentials: {:?}", coc_credentials));
+    writes(format!("found credentials: {:?}", coc_credentials));
     let coc_client = match CocClient::new(coc_credentials).await {
         Ok(c) => c,
         Err(why) => {
-            Rusted_PEKKA::writes(format!("Error creating coc api client: {:?}", why));
+            writes(format!("Error creating coc api client: {:?}", why));
             exit(1);
         }
     };
