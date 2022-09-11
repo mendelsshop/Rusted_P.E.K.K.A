@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error, process::exit, fmt::Display};
+use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error, fmt::{Display, self}};
 
 use serde_json::Value;
 use serenity::{
@@ -116,7 +116,7 @@ pub async fn check_to_many_times(ctx: &Context, msg: &Message, cmd: String) -> C
     Ok(())
 }
 
-pub fn decode_jwt_for_time_left(token: &str) -> Result<bool, Box<dyn Error>> {
+pub fn decode_jwt_for_time_left(token: &str) -> Result<u64, Box<dyn Error + Send + Sync>> {
     let mut split_token = token.split('.').collect::<Vec<&str>>();
     split_token.pop();
     let split_token: [&str; 2] = match split_token.try_into() {
@@ -133,29 +133,62 @@ pub fn decode_jwt_for_time_left(token: &str) -> Result<bool, Box<dyn Error>> {
     let t: u64 = t.get("exp").unwrap().as_f64().unwrap() as u64;
     
     if t < now {
-        return Ok(true);
+        return Err("Token expired")?;    
     }
 
-    Ok(false)
+    Ok(t - now)
 }
 
 pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, password: String)  {
     let keys = Arc::clone(key);
     tokio::spawn(async move {
         loop {
-            if decode_jwt_for_time_left(keys.lock().await.as_str()).unwrap() {
-                writes(format!("Updating link api key"));
-                let client = reqwest::Client::new();
-                    let mut map = HashMap::new();
-                    map.insert("username", &username);
-                    map.insert("password", &password);
-                    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap_or_else(|_| {writes(format!("could not get link api responce")); exit(1)}).text().await.unwrap_or_else(|_|{writes(format!("could not get text from reponce link api")); exit(1)})).unwrap_or_else(|_| {writes(format!("could not parse json")); exit(1)});
-                    let discord_link_token = discord_link_token["token"].as_str().unwrap_or_else(|| {writes(format!("could not get token from json")); exit(1)});
-                    *keys.lock().await = discord_link_token.to_string();
-            }
-            std::thread::sleep(std::time::Duration::from_secs(600));
+            let time_left = match decode_jwt_for_time_left(keys.lock().await.as_str()) {
+                Ok(t) => t,
+                Err(ref e) => {
+                    let e = e.to_string();
+                    match e.as_str() {
+                        "Token expired" => {
+                            let temp = match get_new_link_token(&username, &password).await {
+                                Ok(t) => t,
+                                Err(e) => {
+                                    writes(format!("Error getting new token {:?}", e));
+                                    continue;
+                                }
+                            };
+                            *keys.lock().await = temp.0;
+                            temp.1
+
+                        }
+                        _ => {
+                            writes(format!("Error decoding jwt {}", e));
+                            0
+                        }
+                    }
+                }
+            };
+            std::thread::sleep(std::time::Duration::from_secs(time_left));
+            let temp = match get_new_link_token(&username, &password).await {
+                Ok(t) => t,
+                Err(e) => {
+                    writes(format!("Error getting new token {:?}", e));
+                    continue;
+                }
+            };
+            writes(format!("New token {}", temp.0));
+            *keys.lock().await = temp.0;
         }
     });
+}
+
+pub async fn get_new_link_token(username: &str, password: &str) -> Result<(String, u64), Box<dyn Error + Send + Sync>> {
+    let client = reqwest::Client::new();
+    let mut map = HashMap::new();
+    map.insert("username", &username);
+    map.insert("password", &password);
+    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await?.text().await?)?;
+    let discord_link_token = discord_link_token["token"].as_str().unwrap_to_err("could not get token from json")?;
+    Ok((discord_link_token.to_string(), decode_jwt_for_time_left(discord_link_token)?))
 }
 
 fn parse_args() -> Config{
@@ -187,5 +220,27 @@ pub fn writes<T: Display>(msg: T) {
     match SHOULD_LOG.to_owned() {
         true => log::info!("{}", msg),
         false => writes(format!("{}", msg)),
+    }
+}
+
+pub trait UnwrapToErr<T, D: fmt::Display> {
+    fn unwrap_to_err(self, msg: D) -> Result<T, String>;
+}
+
+impl<T, D: fmt::Display> UnwrapToErr<T, D> for Option<T> {
+    fn unwrap_to_err(self, msg: D) -> Result<T, String> {
+        match self {
+            Some(t) => Ok(t),
+            None => Err(msg.to_string()),
+        }
+    }
+}
+
+impl<T, D: fmt::Display> UnwrapToErr<T, D> for Result<T, Box<dyn Error>> {
+    fn unwrap_to_err(self, msg: D) -> Result<T, String> {
+        match self {
+            Ok(t) => Ok(t),
+            Err(e) => Err(format!("{}: {}", msg, e)),
+        }
     }
 }
