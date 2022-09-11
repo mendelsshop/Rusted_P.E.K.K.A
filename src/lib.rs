@@ -201,6 +201,7 @@ pub async fn get_new_link_token(
     map.insert("username", &username);
     map.insert("password", &password);
     writes(format!("Getting new token"));
+    exit(1);
     let discord_link_token = serde_json::from_str::<Value>(
         &client
             .post("https://cocdiscord.link/login")
