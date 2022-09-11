@@ -200,6 +200,7 @@ pub async fn get_new_link_token(
     let mut map = HashMap::new();
     map.insert("username", &username);
     map.insert("password", &password);
+    writes(format!("Getting new token"));
     let discord_link_token = serde_json::from_str::<Value>(
         &client
             .post("https://cocdiscord.link/login")
@@ -209,9 +210,11 @@ pub async fn get_new_link_token(
             .text()
             .await?,
     )?;
+    writes(format!("got json: {:?}", discord_link_token));
     let discord_link_token = discord_link_token["token"]
         .as_str()
         .unwrap_to_err("could not get token from json")?;
+    writes(format!("got token: {}", discord_link_token));
     Ok((
         discord_link_token.to_string(),
         decode_jwt_for_time_left(discord_link_token)?,
