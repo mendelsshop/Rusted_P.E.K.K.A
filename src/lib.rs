@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error, process::exit};
+use std::{collections::HashMap, sync::Arc, convert::TryInto, error::Error, process::exit, fmt::Display};
 
 use serde_json::Value;
 use serenity::{
@@ -7,6 +7,10 @@ use serenity::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use coc_rs::api::Client as CocClient;
+lazy_static::lazy_static!{
+    pub static ref SHOULD_LOG: bool = parse_args().log;
+}
+
 
 pub async fn get_coc_client(ctx: &Context) -> CocClient {
     let data = ctx.data.read().await;
@@ -99,7 +103,7 @@ pub async fn too_many_tries(msg: String, ctx: &Context, id: u64) -> bool {
 
 pub async fn check_to_many_times(ctx: &Context, msg: &Message, cmd: String) -> CommandResult {
     if too_many_tries(cmd.clone(), ctx, msg.author.id.0).await {
-        println!("Too many tries {}", cmd);
+        writes(format!("Too many tries author:{}, command:{}",msg.author, cmd ));
         let times = get_user_message(ctx, msg.author.id.0).await.unwrap().0;
         msg.reply(
                 &ctx.http,
@@ -108,7 +112,7 @@ pub async fn check_to_many_times(ctx: &Context, msg: &Message, cmd: String) -> C
             .await?;
         return Err("Too many tries".into());
     };
-    println!("Not too many tries {}", cmd);
+    writes(format!("Not too many tries {}", cmd));
     Ok(())
 }
 
@@ -140,16 +144,48 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
     tokio::spawn(async move {
         loop {
             if decode_jwt_for_time_left(keys.lock().await.as_str()).unwrap() {
-                println!("Updating link api key");
+                writes(format!("Updating link api key"));
                 let client = reqwest::Client::new();
                     let mut map = HashMap::new();
                     map.insert("username", &username);
                     map.insert("password", &password);
-                    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap_or_else(|_| {println!("could not get link api responce"); exit(1)}).text().await.unwrap_or_else(|_|{println!("could not get text from reponce link api"); exit(1)})).unwrap_or_else(|_| {println!("could not parse json"); exit(1)});
-                    let discord_link_token = discord_link_token["token"].as_str().unwrap_or_else(|| {println!("could not get token from json"); exit(1)});
+                    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap_or_else(|_| {writes(format!("could not get link api responce")); exit(1)}).text().await.unwrap_or_else(|_|{writes(format!("could not get text from reponce link api")); exit(1)})).unwrap_or_else(|_| {writes(format!("could not parse json")); exit(1)});
+                    let discord_link_token = discord_link_token["token"].as_str().unwrap_or_else(|| {writes(format!("could not get token from json")); exit(1)});
                     *keys.lock().await = discord_link_token.to_string();
             }
             std::thread::sleep(std::time::Duration::from_secs(600));
         }
     });
+}
+
+fn parse_args() -> Config{
+    let args = std::env::args();
+    let mut config = Config::new();
+    for arg in args {
+        match arg.as_str() {
+            "--log" => {
+                config.log = true;
+
+            }
+            _ => {}
+        }
+    }
+    config
+}
+
+pub struct Config {
+    pub log: bool,
+}
+
+impl Config {
+    pub fn new() -> Self {
+        Self { log: false }
+    }
+}
+
+pub fn writes<T: Display>(msg: T) {
+    match SHOULD_LOG.to_owned() {
+        true => log::info!("{}", msg),
+        false => writes(format!("{}", msg)),
+    }
 }

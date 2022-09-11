@@ -13,7 +13,7 @@ use serenity::http::Http;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer, DiscordLinkAPIContainer};
+use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer, DiscordLinkAPIContainer, writes};
 
 use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredentials};
 
@@ -23,16 +23,17 @@ use crate::commands::owner::*;
 
 
 
+
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
-        println!("Connected as {}", ready.user.name);
+        Rusted_PEKKA::writes(format!("Connected as {}", ready.user.name));
     }
 
     async fn resume(&self, _: Context, _: ResumedEvent) {
-        println!("Resumed");
+        Rusted_PEKKA::writes(format!("Resumed"));
     }
 }
 
@@ -46,7 +47,7 @@ async fn my_help(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    println!("Help command called");
+    Rusted_PEKKA::writes(format!("Help command called"));
     let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
     Ok(())
 }
@@ -56,6 +57,11 @@ async fn my_help(
 struct General;
 #[tokio::main]
 async fn main() {
+    if Rusted_PEKKA::SHOULD_LOG.to_owned() {
+        simple_file_logger::init_logger("Rusted_P.E.K.K.A", simple_file_logger::LogLevel::Info).unwrap();
+        Rusted_PEKKA::writes(format!("Logging enabled"));
+    }
+
     // TODO: stop using unwrap everywhere and use proper error handling
     // and check for bad responces from rqwest
     let discord_link_user = env::var("discordlink_username").expect("Expected DISCORD_LINK_USER in environment");
@@ -64,8 +70,8 @@ async fn main() {
     let mut map = HashMap::new();
     map.insert("username", &discord_link_user);
     map.insert("password", &discord_link_password);
-    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap_or_else(|e| {println!("could not get link api responce\nerr: {}", e); exit(1)}).text().await.unwrap_or_else(|e|{println!("could not get text from reponce link api\nerr: {e}"); exit(1)})).unwrap_or_else(|e| {println!("could not parse json\nerr{e}"); exit(1)});
-    let discord_link_token = discord_link_token["token"].as_str().unwrap_or_else(|| {println!("could not get token from json"); exit(1)});
+    let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap_or_else(|e| {Rusted_PEKKA::writes(format!("could not get link api responce\nerr: {}", e)); exit(1)}).text().await.unwrap_or_else(|e|{writes(format!("could not get text from reponce link api\nerr: {e}")); exit(1)})).unwrap_or_else(|e| {writes(format!("could not parse json\nerr{e}")); exit(1)});
+    let discord_link_token = discord_link_token["token"].as_str().unwrap_or_else(|| {Rusted_PEKKA::writes(format!("could not get token from json")); exit(1)});
     let discord_link_token = Arc::new(Mutex::new(discord_link_token.to_string()));
     Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
     let coc_credentials = CocCredentials::builder()
@@ -74,15 +80,15 @@ async fn main() {
             env::var("cocapi_password").expect("Password not found"),
         )
         .build();
-    println!("found credentials: {:?}", coc_credentials);
+    Rusted_PEKKA::writes(format!("found credentials: {:?}", coc_credentials));
     let coc_client = match CocClient::new(coc_credentials).await {
         Ok(c) => c,
         Err(why) => {
-            println!("Error creating coc api client: {:?}", why);
+            Rusted_PEKKA::writes(format!("Error creating coc api client: {:?}", why));
             exit(1);
         }
     };
-    println!("connected to coc api");
+    Rusted_PEKKA::writes(format!("connected to coc api"));
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let http = Http::new(&token);

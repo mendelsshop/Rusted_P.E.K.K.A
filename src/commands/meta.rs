@@ -13,7 +13,7 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
             msg.reply(ctx,  "Pong!, Took `Some amount of time`!").await?;
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            Rusted_PEKKA::writes(format!("Error: {:?}", e));
         }
     }
     Ok(())
@@ -28,7 +28,7 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
             msg.reply(&ctx.http, "I am made in rust.\nI am a P.E.K.K.A no longer in service,\nbecause I rusted near the spell factory,\nhere to help all the clash chiefs. ").await?;
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            Rusted_PEKKA::writes(format!("Error: {:?}", e));
         }
     }
 
