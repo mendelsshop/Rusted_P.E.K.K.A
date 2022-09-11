@@ -100,7 +100,7 @@ async fn main() {
     // Create the framework
     let framework = StandardFramework::new()
         .configure(|c| c.owners(owners).prefix("/"))
-        .group(&GENERAL_GROUP);
+        .group(&GENERAL_GROUP).help(&MY_HELP);
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
