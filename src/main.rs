@@ -37,7 +37,7 @@ impl EventHandler for Handler {
 }
 
 #[help]
-#[individual_command_tip = "SquireBot Commands:\nIf you want more information about a specific command, just pass the command as argument."]
+#[individual_command_tip = "Rusted_P.E.K.K.A Commands:\nIf you want more information about a specific command, just pass the command as argument."]
 async fn my_help(
     context: &Context,
     msg: &Message,
