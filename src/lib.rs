@@ -146,7 +146,7 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
                     map.insert("username", &username);
                     map.insert("password", &password);
                     let discord_link_token = serde_json::from_str::<Value>(&client.post("https://cocdiscord.link/login").json(&map).send().await.unwrap_or_else(|_| {println!("could not get link api responce"); exit(1)}).text().await.unwrap_or_else(|_|{println!("could not get text from reponce link api"); exit(1)})).unwrap_or_else(|_| {println!("could not parse json"); exit(1)});
-                    let discord_link_token = discord_link_token["token"].as_str().unwrap();
+                    let discord_link_token = discord_link_token["token"].as_str().unwrap_or_else(|| {println!("could not get token from json"); exit(1)});
                     *keys.lock().await = discord_link_token.to_string();
             }
             std::thread::sleep(std::time::Duration::from_secs(600));
