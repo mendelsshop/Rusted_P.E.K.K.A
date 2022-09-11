@@ -3,7 +3,9 @@ use serenity::framework::standard::CommandResult;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
+
 #[command]
+#[help_available]
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     match Rusted_PEKKA::check_to_many_times(ctx, msg, "ping".to_string()).await {
         Ok(_) => {
@@ -16,6 +18,7 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 #[command]
+#[help_available]
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
 
     match Rusted_PEKKA::check_to_many_times(ctx, msg, "about".to_string()).await {

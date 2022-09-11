@@ -7,6 +7,7 @@ use Rusted_PEKKA::ShardManagerContainer;
 
 #[command]
 #[owners_only]
+#[help_available]
 async fn quit(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
 
