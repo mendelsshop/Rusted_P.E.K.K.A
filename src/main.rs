@@ -6,7 +6,7 @@ use std::env;
 use std::process::exit;
 
 use serde_json::Value;
-use serenity::async_trait;
+use serenity::{async_trait, framework::standard::{macros::help, Args, HelpOptions, CommandGroup, CommandResult, help_commands}, model::prelude::{Message, UserId}};
 use serenity::framework::standard::macros::group;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
@@ -34,6 +34,20 @@ impl EventHandler for Handler {
     async fn resume(&self, _: Context, _: ResumedEvent) {
         println!("Resumed");
     }
+}
+
+#[help]
+#[individual_command_tip = "SquireBot Commands:\nIf you want more information about a specific command, just pass the command as argument."]
+async fn my_help(
+    context: &Context,
+    msg: &Message,
+    args: Args,
+    help_options: &'static HelpOptions,
+    groups: &[&'static CommandGroup],
+    owners: HashSet<UserId>,
+) -> CommandResult {
+    let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
+    Ok(())
 }
 
 #[group]
