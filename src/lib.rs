@@ -239,11 +239,13 @@ fn parse_args() -> Config {
     }
     match config.log.to_owned() {
         true => log::info!("{}", "Done parse_args"),
-        false => writes(format!("{}", "Done parse_args")),
+        false => println!("{}", "Done parse_args"),
     }
+    println!("parse_args: {:?}", config);
     config
 }
 
+#[derive(Debug, Clone)]
 pub struct Config {
     pub log: bool,
 }
