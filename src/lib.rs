@@ -201,7 +201,6 @@ pub async fn get_new_link_token(
     map.insert("username", &username);
     map.insert("password", &password);
     writes(format!("Getting new token"));
-    exit(1);
     let discord_link_token = serde_json::from_str::<Value>(
         &client
             .post("https://cocdiscord.link/login")
@@ -223,6 +222,7 @@ pub async fn get_new_link_token(
 }
 
 fn parse_args() -> Config {
+    println!("parse_args: {:?}", std::env::args());
     let args = std::env::args();
     let mut config = Config::new();
     for arg in args {
@@ -236,6 +236,10 @@ fn parse_args() -> Config {
             }
             _ => {}
         }
+    }
+    match config.log.to_owned() {
+        true => log::info!("{}", "Done parse_args"),
+        false => writes(format!("{}", "Done parse_args")),
     }
     config
 }
