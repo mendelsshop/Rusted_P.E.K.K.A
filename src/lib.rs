@@ -222,7 +222,6 @@ pub async fn get_new_link_token(
 }
 
 fn parse_args() -> Config {
-    println!("parse_args: {:?}", std::env::args());
     let args = std::env::args();
     let mut config = Config::new();
     for arg in args {
@@ -237,11 +236,6 @@ fn parse_args() -> Config {
             _ => {}
         }
     }
-    match config.log.to_owned() {
-        true => log::info!("{}", "Done parse_args"),
-        false => println!("{}", "Done parse_args"),
-    }
-    println!("parse_args: {:?}", config);
     config
 }
 
@@ -259,7 +253,7 @@ impl Config {
 pub fn writes<T: Display>(msg: T) {
     match SHOULD_LOG.to_owned() {
         true => log::info!("{}", msg),
-        false => writes(format!("{}", msg)),
+        false => println!("{}", msg),
     }
 }
 
