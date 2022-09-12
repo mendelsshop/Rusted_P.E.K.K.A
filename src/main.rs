@@ -60,7 +60,7 @@ async fn main()  {
         simple_file_logger::init_logger("Rusted_P.E.K.K.A", simple_file_logger::LogLevel::Info).unwrap();
         Rusted_PEKKA::writes(format!("Logging enabled"));
     }
-
+    println!("Rusted_P.E.K.K.A");
     // TODO: stop using unwrap everywhere and use proper error handling
     // and check for bad responces from rqwest
     let discord_link_user = env::var("discordlink_username").expect("Expected DISCORD_LINK_USER in environment");
