@@ -7,6 +7,7 @@ use serenity::prelude::*;
 #[help_available]
 #[description = "Get a player's name"]
 async fn player(ctx: &Context, msg: &Message) -> CommandResult {
+    Rusted_PEKKA::writes(format!("player name requested for {}", msg.author.name));
     if let Some(player_tag) = Rusted_PEKKA::get_player_id(msg.author.id.0, ctx).await {
         Rusted_PEKKA::writes(format!("Player tag: {}", player_tag));
         let coc_client = Rusted_PEKKA::get_coc_client(ctx).await;
