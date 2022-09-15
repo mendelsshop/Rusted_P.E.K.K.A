@@ -12,6 +12,7 @@ use serenity::{
     client::bridge::gateway::ShardManager, framework::standard::CommandResult,
     model::prelude::Message, prelude::*,
 };
+use tokio::task::JoinHandle;
 use std::time::{SystemTime, UNIX_EPOCH};
 lazy_static::lazy_static! {
     pub static ref SHOULD_LOG: bool = parse_args().log;
@@ -50,17 +51,36 @@ pub async fn get_discord_link_api(ctx: &Context) -> Arc<Mutex<String>> {
 pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
     let discord_link_api = get_discord_link_api(ctx).await;
     let discord_link_api: String = discord_link_api.lock().await.clone();
+    writes(format!("got link api token"));
     let client = reqwest::Client::new();
     let mut player_id = client.get(format!("https://cocdiscord.link/links/{discord_id}"));
     player_id = player_id.bearer_auth(discord_link_api);
-    let player_id = player_id.send().await.unwrap();
+    let player_id = match player_id.send().await {
+        Ok(player_id) => player_id,
+        Err(e) => {
+            writes(format!("Error getting player id: {}", e));
+            return None;
+        }
+    };
+    writes(format!("got player id"));
     match player_id.status() {
         reqwest::StatusCode::OK => {
-            let player_id = player_id.text().await.unwrap();
-            let player_id: Value = serde_json::from_str(&player_id).unwrap();
-            let player_id = player_id.as_array().unwrap()[0]["playerTag"]
-                .as_str()
-                .unwrap();
+            let player_id = match player_id.text().await {
+                Ok(player_id) => player_id,
+                Err(e) => {
+                    writes(format!("Error getting player id: {}", e));
+                    return None;
+                }
+            };
+            let player_id: Value = match serde_json::from_str(&player_id) {
+                Ok(player_id) => player_id,
+                Err(e) => {
+                    writes(format!("Error parsing player id json: {}", e));
+                    return None;
+                }
+            };
+            let player_id = player_id.as_array()?[0]["playerTag"]
+                .as_str()?;
             Some(player_id.to_string())
         }
         _ => None,
@@ -151,7 +171,7 @@ pub fn decode_jwt_for_time_left(token: &str) -> Result<u64, Box<dyn Error + Send
     Ok(t - now)
 }
 
-pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, password: String) {
+pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, password: String) ->  JoinHandle<i32>{
     let keys = Arc::clone(key);
     tokio::spawn(async move {
         loop {
@@ -189,7 +209,7 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
             writes(format!("New token {}", temp.0));
             *keys.lock().await = temp.0;
         }
-    });
+    })
 }
 
 pub async fn get_new_link_token(

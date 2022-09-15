@@ -73,7 +73,7 @@ async fn main()  {
     };
     writes(format!("Got link token: {}", discord_link_token));
     let discord_link_token = Arc::new(Mutex::new(discord_link_token.to_string()));
-    Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
+    let thread_handle = Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
     let coc_credentials = CocCredentials::builder()
         .add_credential(
             env::var("cocapi_username").expect("coc api email not found"),
@@ -135,7 +135,16 @@ async fn main()  {
         shard_manager.lock().await.shutdown_all().await;
     });
 
+
+
     if let Err(why) = client.start().await {
         log::error!("Client error: {:?}", why);
+    }
+
+    loop {
+        if thread_handle.is_finished() {
+            writes("Link token update thread finished");
+            exit(1);
+        }
     }
 }
