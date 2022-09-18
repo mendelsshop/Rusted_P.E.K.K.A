@@ -198,7 +198,8 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
                     }
                 }
             };
-            std::thread::sleep(std::time::Duration::from_secs(time_left));
+            // std::thread::sleep(std::time::Duration::from_secs(time_left));
+            tokio::time::sleep(tokio::time::Duration::from_millis(time_left * 1000)).await;
             let temp = match get_new_link_token(&username, &password).await {
                 Ok(t) => t,
                 Err(e) => {
