@@ -3,7 +3,8 @@ use std::{
     convert::TryInto,
     error::Error,
     fmt::{self, Display},
-    sync::Arc, process::exit,
+    process::exit,
+    sync::Arc,
 };
 
 use coc_rs::api::Client as CocClient;
@@ -12,8 +13,8 @@ use serenity::{
     client::bridge::gateway::ShardManager, framework::standard::CommandResult,
     model::prelude::Message, prelude::*,
 };
-use tokio::task::JoinHandle;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::task::JoinHandle;
 lazy_static::lazy_static! {
     pub static ref SHOULD_LOG: bool = parse_args().log;
 }
@@ -51,7 +52,7 @@ pub async fn get_discord_link_api(ctx: &Context) -> Arc<Mutex<String>> {
 pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
     let discord_link_api = get_discord_link_api(ctx).await;
     let discord_link_api: String = discord_link_api.lock().await.clone();
-    writes(format!("got link api token"));
+    writes("got link api token".to_string());
     let client = reqwest::Client::new();
     let mut player_id = client.get(format!("https://cocdiscord.link/links/{discord_id}"));
     player_id = player_id.bearer_auth(discord_link_api);
@@ -62,7 +63,7 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
             return None;
         }
     };
-    writes(format!("got player id"));
+    writes("got player id".to_string());
     match player_id.status() {
         reqwest::StatusCode::OK => {
             let player_id = match player_id.text().await {
@@ -79,8 +80,7 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
                     return None;
                 }
             };
-            let player_id = player_id.as_array()?[0]["playerTag"]
-                .as_str()?;
+            let player_id = player_id.as_array()?[0]["playerTag"].as_str()?;
             Some(player_id.to_string())
         }
         _ => None,
@@ -171,7 +171,11 @@ pub fn decode_jwt_for_time_left(token: &str) -> Result<u64, Box<dyn Error + Send
     Ok(t - now)
 }
 
-pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, password: String) ->  JoinHandle<i32>{
+pub async fn check_link_api_update(
+    key: &Arc<Mutex<String>>,
+    username: String,
+    password: String,
+) -> JoinHandle<i32> {
     let keys = Arc::clone(key);
     tokio::spawn(async move {
         loop {
@@ -198,8 +202,9 @@ pub async fn check_link_api_update(key: &Arc<Mutex<String>>, username: String, p
                     }
                 }
             };
-            // std::thread::sleep(std::time::Duration::from_secs(time_left));
+            writes(format!("Time left in seconds: {}", time_left));
             tokio::time::sleep(tokio::time::Duration::from_millis(time_left * 1000)).await;
+            writes("Updating token".to_string());
             let temp = match get_new_link_token(&username, &password).await {
                 Ok(t) => t,
                 Err(e) => {
@@ -221,7 +226,7 @@ pub async fn get_new_link_token(
     let mut map = HashMap::new();
     map.insert("username", &username);
     map.insert("password", &password);
-    writes(format!("Getting new token"));
+    writes("Getting new token".to_string());
     let discord_link_token = serde_json::from_str::<Value>(
         &client
             .post("https://cocdiscord.link/login")

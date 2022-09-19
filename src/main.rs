@@ -1,27 +1,36 @@
 mod commands;
 
-use std::{collections::{HashMap, HashSet}, sync::Arc};
 use std::env;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use std::process::exit;
 
-use serenity::{async_trait, framework::standard::{macros::help, Args, HelpOptions, CommandGroup, CommandResult, help_commands}, model::prelude::{Message, UserId}};
 use serenity::framework::standard::macros::group;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use Rusted_PEKKA::{CocClientContainer, ShardManagerContainer, UserMessageContainer, DiscordLinkAPIContainer, writes};
+use serenity::{
+    async_trait,
+    framework::standard::{
+        help_commands, macros::help, Args, CommandGroup, CommandResult, HelpOptions,
+    },
+    model::prelude::{Message, UserId},
+};
+use Rusted_PEKKA::{
+    writes, CocClientContainer, DiscordLinkAPIContainer, ShardManagerContainer,
+    UserMessageContainer,
+};
 
 use coc_rs::{api::Client as CocClient, credentials::Credentials as CocCredentials};
 
 use crate::commands::cocs::*;
 use crate::commands::meta::*;
 use crate::commands::owner::*;
-
-
-
 
 struct Handler;
 
@@ -32,7 +41,7 @@ impl EventHandler for Handler {
     }
 
     async fn resume(&self, _: Context, _: ResumedEvent) {
-        Rusted_PEKKA::writes(format!("Resumed"));
+        Rusted_PEKKA::writes("Resumed".to_string());
     }
 }
 
@@ -46,7 +55,7 @@ async fn my_help(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    Rusted_PEKKA::writes(format!("Help command called"));
+    Rusted_PEKKA::writes("Help command called".to_string());
     let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
     Ok(())
 }
@@ -55,25 +64,34 @@ async fn my_help(
 #[commands(ping, quit, about, player)]
 struct General;
 #[tokio::main]
-async fn main()  {
+async fn main() {
     if Rusted_PEKKA::SHOULD_LOG.to_owned() {
-        simple_file_logger::init_logger("Rusted_P.E.K.K.A", simple_file_logger::LogLevel::Info).unwrap();
-        Rusted_PEKKA::writes(format!("Logging enabled"));
+        simple_file_logger::init_logger("Rusted_P.E.K.K.A", simple_file_logger::LogLevel::Info)
+            .unwrap();
+        Rusted_PEKKA::writes("Logging enabled".to_string());
     }
     // TODO: stop using unwrap everywhere and use proper error handling
     // and check for bad responces from rqwest
-    let discord_link_user = env::var("discordlink_username").expect("Expected DISCORD_LINK_USER in environment");
-    let discord_link_password = env::var("discordlink_password").expect("Expected DISCORD_LINK_PASSWORD in environment");
-    let discord_link_token = match  Rusted_PEKKA::get_new_link_token(&discord_link_user, &discord_link_password).await {
-        Ok(token) => token.0,
-        Err(why) => {
-            writes(format!("Error getting link token: {:?}", why));
-            exit(1);
-        }
-    };
+    let discord_link_user =
+        env::var("discordlink_username").expect("Expected DISCORD_LINK_USER in environment");
+    let discord_link_password =
+        env::var("discordlink_password").expect("Expected DISCORD_LINK_PASSWORD in environment");
+    let discord_link_token =
+        match Rusted_PEKKA::get_new_link_token(&discord_link_user, &discord_link_password).await {
+            Ok(token) => token.0,
+            Err(why) => {
+                writes(format!("Error getting link token: {:?}", why));
+                exit(1);
+            }
+        };
     writes(format!("Got link token: {}", discord_link_token));
     let discord_link_token = Arc::new(Mutex::new(discord_link_token.to_string()));
-    let thread_handle = Rusted_PEKKA::check_link_api_update(&discord_link_token, discord_link_user.to_string(), discord_link_password.to_string()).await;
+    let thread_handle = Rusted_PEKKA::check_link_api_update(
+        &discord_link_token,
+        discord_link_user.to_string(),
+        discord_link_password.to_string(),
+    )
+    .await;
     let coc_credentials = CocCredentials::builder()
         .add_credential(
             env::var("cocapi_username").expect("coc api email not found"),
@@ -88,7 +106,7 @@ async fn main()  {
             exit(1);
         }
     };
-    Rusted_PEKKA::writes(format!("connected to coc api"));
+    Rusted_PEKKA::writes("connected to coc api".to_string());
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let http = Http::new(&token);
@@ -107,7 +125,8 @@ async fn main()  {
     // Create the framework
     let framework = StandardFramework::new()
         .configure(|c| c.owners(owners).prefix("/"))
-        .group(&GENERAL_GROUP).help(&MY_HELP);
+        .group(&GENERAL_GROUP)
+        .help(&MY_HELP);
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
@@ -134,8 +153,6 @@ async fn main()  {
             .expect("Could not register ctrl+c handler");
         shard_manager.lock().await.shutdown_all().await;
     });
-
-
 
     if let Err(why) = client.start().await {
         log::error!("Client error: {:?}", why);
