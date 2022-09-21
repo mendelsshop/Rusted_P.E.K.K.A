@@ -185,15 +185,8 @@ pub async fn check_link_api_update(
                     let e = e.to_string();
                     match e.as_str() {
                         "Token expired" => {
-                            let temp = match get_new_link_token(&username, &password).await {
-                                Ok(t) => t,
-                                Err(e) => {
-                                    writes(format!("Error getting new token {:?}", e));
-                                    continue;
-                                }
-                            };
-                            *keys.lock().await = temp.0;
-                            temp.1
+                            writes("Token expired, getting new token".to_string());
+                            0
                         }
                         _ => {
                             writes(format!("Error decoding jwt {}", e));
