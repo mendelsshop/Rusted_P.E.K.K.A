@@ -8,9 +8,10 @@ use serenity::prelude::*;
 #[description = "Get a player's name"]
 async fn player(ctx: &Context, msg: &Message) -> CommandResult {
     Rusted_PEKKA::writes(format!("player name requested for {}", msg.author.name));
-    if let Some(player_tag) = Rusted_PEKKA::get_player_id(msg.author.id.0, ctx).await {
-        Rusted_PEKKA::writes(format!("Player tag: {}", player_tag));
+match Rusted_PEKKA::get_player_id(msg.author.id.0, ctx).await {
+    Ok(player_tag) => {
         let coc_client = Rusted_PEKKA::get_coc_client(ctx).await;
+        Rusted_PEKKA::writes(format!("Player tag: {}", player_tag));
         let player = match coc_client.get_player(&player_tag).await {
             Ok(p) => p,
             Err(why) => {
@@ -21,13 +22,20 @@ async fn player(ctx: &Context, msg: &Message) -> CommandResult {
         };
         msg.reply(&ctx.http, format!("Player: {}", player.name))
             .await?;
-    } else {
-        msg.reply(
-            &ctx.http,
-            "No player tag provided, use /link to link your account",
-        )
-        .await?;
     }
+    Err(why) => { match why.to_string().as_str() {
+        "non recoverable error" => {
+            Rusted_PEKKA::writes(format!("Error getting player id: {}", why));
+            msg.reply(&ctx.http, "Error getting player id").await?;
+        }
+        _ => {
+            Rusted_PEKKA::writes(format!("Error getting player id: {}", why));
+            msg.reply(&ctx.http, "please try again network connection was interupted").await?;
+        }
+    
+    }
+        }        
 
+    } 
     Ok(())
 }

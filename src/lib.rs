@@ -49,7 +49,7 @@ pub async fn get_discord_link_api(ctx: &Context) -> Arc<Mutex<String>> {
         .clone()
 }
 
-pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
+pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Result<String, Box<dyn Error + Send + Sync>> {
     let discord_link_api = get_discord_link_api(ctx).await;
     let discord_link_api: String = discord_link_api.lock().await.clone();
     writes("got link api token".to_string());
@@ -60,7 +60,14 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
         Ok(player_id) => player_id,
         Err(e) => {
             writes(format!("Error getting player id: {}", e));
-            return None;
+            match e.to_string() {
+                e if e.contains("dns error: failed to lookup address information: Name or service not known") => {
+                    Err("retry")?
+                }
+                _ => {
+                    Err("non recoverable error")?
+                }
+            }
         }
     };
     writes("got player id".to_string());
@@ -70,20 +77,23 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Option<String> {
                 Ok(player_id) => player_id,
                 Err(e) => {
                     writes(format!("Error getting player id: {}", e));
-                    return None;
+                    return Err("non recoverable error")?;
                 }
             };
             let player_id: Value = match serde_json::from_str(&player_id) {
                 Ok(player_id) => player_id,
                 Err(e) => {
                     writes(format!("Error parsing player id json: {}", e));
-                    return None;
+                    return Err("non recoverable error")?;
                 }
             };
-            let player_id = player_id.as_array()?[0]["playerTag"].as_str()?;
-            Some(player_id.to_string())
+            let player_id = player_id.as_array().unwrap_to_err("non recoverable error")?[0]["playerTag"].as_str().unwrap_to_err("non recoverable error")?;
+            Ok(player_id.to_string())
         }
-        _ => None,
+        _ => {
+            writes(format!("Error getting player id: {}", player_id.status()));
+            Err("non recoverable error")?
+        }
     }
 }
 
