@@ -61,7 +61,7 @@ async fn my_help(
 }
 
 #[group]
-#[commands(ping, quit, about, player)]
+#[commands(ping, quit, about, player, clan)]
 struct General;
 #[tokio::main]
 async fn main() {

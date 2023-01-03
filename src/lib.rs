@@ -49,7 +49,10 @@ pub async fn get_discord_link_api(ctx: &Context) -> Arc<Mutex<String>> {
         .clone()
 }
 
-pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Result<String, Box<dyn Error + Send + Sync>> {
+pub async fn get_player_id(
+    discord_id: u64,
+    ctx: &Context,
+) -> Result<String, Box<dyn Error + Send + Sync>> {
     let discord_link_api = get_discord_link_api(ctx).await;
     let discord_link_api: String = discord_link_api.lock().await.clone();
     writes("got link api token".to_string());
@@ -61,12 +64,13 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Result<String, Box
         Err(e) => {
             writes(format!("Error getting player id: {}", e));
             match e.to_string() {
-                e if e.contains("dns error: failed to lookup address information: Name or service not known") => {
+                e if e.contains(
+                    "dns error: failed to lookup address information: Name or service not known",
+                ) =>
+                {
                     Err("retry")?
                 }
-                _ => {
-                    Err("non recoverable error")?
-                }
+                _ => Err("non recoverable error")?,
             }
         }
     };
@@ -87,7 +91,11 @@ pub async fn get_player_id(discord_id: u64, ctx: &Context) -> Result<String, Box
                     return Err("non recoverable error")?;
                 }
             };
-            let player_id = player_id.as_array().unwrap_to_err("non recoverable error")?[0]["playerTag"].as_str().unwrap_to_err("non recoverable error")?;
+            let player_id = player_id
+                .as_array()
+                .unwrap_to_err("non recoverable error")?[0]["playerTag"]
+                .as_str()
+                .unwrap_to_err("non recoverable error")?;
             Ok(player_id.to_string())
         }
         _ => {
@@ -164,7 +172,14 @@ pub fn decode_jwt_for_time_left(token: &str) -> Result<u64, Box<dyn Error + Send
     };
     let mut split_token_string: [String; 2] = ["".to_string(), "".to_string()];
     for (i, token) in split_token.into_iter().enumerate() {
-        let t = base64::decode_config(token, base64::URL_SAFE_NO_PAD).unwrap();
+        let t = base64::decode_engine(
+            token,
+            &base64::engine::fast_portable::FastPortable::from(
+                &base64::alphabet::URL_SAFE,
+                base64::engine::fast_portable::NO_PAD,
+            ),
+        )
+        .unwrap();
         split_token_string[i] = String::from_utf8(t).unwrap();
     }
     let now = SystemTime::now()
